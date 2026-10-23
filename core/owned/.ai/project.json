@@ -1,0 +1,16 @@
+{
+  "name": "{{name}}",
+  "baseBranch": "{{baseBranch}}",
+  "branchPrefix": "feature/",
+  "taskPrefix": "T",
+  "repo": "{{repo}}",
+  "leadWorktree": "../{{name}}-lead",
+  "mergeTrailer": "Co-Authored-By: Claude <noreply@anthropic.com>",
+  "ci": {
+    "provider": "github",
+    "tokenFile": "~/.config/{{name}}-gh-token"
+  },
+  "coder": {
+    "settings": ".ai/coder-settings.json"
+  }
+}

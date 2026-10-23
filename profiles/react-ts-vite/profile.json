@@ -1,0 +1,18 @@
+{
+  "name": "react-ts-vite",
+  "description": "React + TypeScript + Vite web app with a Node/Express server, npm workspaces (shared / server / web), Vitest-free node:test unit tests and Playwright E2E",
+  "standardChecks": "- `npm run typecheck`\n- `npm run lint` and `npm run format:check`\n- `npm test` (unit and integration)\n- `npm run build`\n- the E2E specs the change touches (`npx playwright test <spec>`); the full suite runs in CI",
+  "coderAllow": [
+    "Bash(npm ci)",
+    "Bash(npm test:*)",
+    "Bash(npm run:*)",
+    "Bash(npx tsc:*)",
+    "Bash(npx tsx:*)",
+    "Bash(npx prettier:*)",
+    "Bash(npx eslint:*)",
+    "Bash(npx playwright test:*)",
+    "Bash(node:*)",
+    "Bash(curl -s http://localhost:*)",
+    "Bash(curl -sf http://localhost:*)"
+  ]
+}
