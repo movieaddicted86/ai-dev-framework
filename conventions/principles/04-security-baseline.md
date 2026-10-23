@@ -14,6 +14,9 @@ traversal in file APIs). Tasks that touch these areas are **high risk** (never a
 - **MUST** treat configuration or options that a user can set as code when they can reach an executable setting
   (post-processing scripts, hooks, plugins, custom commands). Allowlist the keys; reject the rest with the
   allowed list in the error message.
+- **Verify the actual mechanism of every control.** A protection that works "because the child process happens to
+  close stdin" is an accident, not a control — it disappears with the next refactoring. Remove the dangerous
+  capability (strip the key at the single funnel) and pin it with a test.
 - A fix for an injection is tested with the **bypass variants** (case, encoding, aliases, nested keys, other
   entry points such as the RPC/MCP transport), not only the reported case.
 

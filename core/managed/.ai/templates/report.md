@@ -7,15 +7,18 @@ Branch: `feature/T-NNN` · Commits: `abc1234` <subject>, …
 Per acceptance criterion: what was implemented and where (file:line).
 
 ## Evidence
-Commands with their result (copy the summary lines), browser checks with observed values.
+A summary of about 40 lines: commands with their result lines, counts, sizes, observed values. Raw logs and
+captures stay in `.ai/work/T-NNN/` and are referenced here.
 CI: run URL / commit sha (not its result – the lead checks it).
+Refactorings: before/after file sizes and the baseline-vs-branch comparison (see the evidence kit).
 
 ## Review findings addressed (from round 2 on)
 Finding → what was changed → commit.
 
 ## Deviations
-Only real deviations from the task's binding decisions or acceptance criteria, and why. Write exactly
-`None.` when there are none – the lead autopilot merges routine hand-backs only then.
+Only real deviations from the task's binding decisions or acceptance criteria, and why — including a task
+statement that turned out to be wrong or contradictory. Write exactly `None.` when there are none – the lead
+autopilot merges routine hand-backs only then.
 
 ## Notes
 Everything else worth knowing (choices within the task, flaky tests seen, follow-up ideas, questions).

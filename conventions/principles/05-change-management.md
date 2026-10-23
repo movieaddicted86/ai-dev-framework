@@ -55,6 +55,10 @@ A new library, pattern or tool enters only via the radar process:
 
 ## Release hygiene
 
+- Shared append-only documents (changelog, test-case lists) are merge hotspots. Identify entries by **task id**,
+  not by a running number, and resolve conflicts "keep both"; two parallel branches that both edit the same
+  hotspot are merged one after the other.
+
 - Changelog "Unreleased" is updated in each change; releases are cut from the base branch by tag.
 - Version numbers are checked by CI where several files carry them (`version:check`).
 - Docs-only changes skip the expensive CI jobs; the cheap checks (lint, format, unit) always run.

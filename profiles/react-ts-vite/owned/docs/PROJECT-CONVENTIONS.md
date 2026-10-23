@@ -13,6 +13,12 @@ or records a justified deviation.
 ## 3. Domain rules
 (Invariants of the domain that every change must respect, with the test that pins each.)
 
+## 3b. Specs and snapshots that pin structure
+A change to one of these areas always runs the listed spec locally (a toolbar change broke the same spec twice).
+| Area | Pinned by | Run |
+|---|---|---|
+| (e.g. object toolbar, sidebar, status codes of an endpoint) | (e.g. `e2e/specs/sidebar.spec.ts`) | `npx playwright test <spec>` |
+
 ## 4. Deviations from the profile
 | Rule | Deviation | Reason | Since |
 |---|---|---|---|

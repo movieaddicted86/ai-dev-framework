@@ -83,7 +83,19 @@ CI polling; the model itself needed ~30 min). So:
   watches the coder's terminal). Small choices: take the option closest to the task and the conventions, carry
   on, and list it under "Deviations" in the report. Real blockers: report + `in_review` as above; the lead
   answers in `reviews/` or asks the decider via `decisions/`.
-- **Scope:** change only what the task needs. Unrelated findings go into the report's Notes.
+- **Scope:** change only what the task needs. Unrelated findings go into the report's Notes. A fix of the same
+  rule in a second place is in scope (own commit); anything else is a Note.
+- **Hand-back is one step:** push the branch, write the report, set the STATE row to `in_review` — in that order,
+  and never forget the row (a task left `in_progress` makes the runner treat it as unfinished work).
+- **Scratch:** all temporary files (probes, captures, comparison trees, logs) go to `.ai/work/T-NNN/`; the
+  coder writes nothing else into `.ai/` except `STATE.md` and its report. The autopilot removes the folder after
+  the merge. Never leave servers, containers, worktrees or build trees outside the repo behind.
+- **Before a hand-back, run the cheap checks that CI would fail on:** typecheck, lint, format check, unit tests,
+  plus the one spec that pins the structure you changed. Most returned tasks failed on exactly those.
+- **A flaky or racy test is a bug:** reproduce it (run the file in a loop), find the cause, fix the code or the
+  test. "Fixed as a test race" without a reproduction does not count.
+- **Report evidence is a summary** (about 40 lines): commands with their result lines, counts, sizes. Raw logs
+  stay in `.ai/work/T-NNN/` and are referenced.
 - The watcher wakes you only for new or changed files in `tasks/` and `reviews/` (the lead always hands over
   input that way); your own edits of `STATE.md` and `reports/` do not wake you.
 

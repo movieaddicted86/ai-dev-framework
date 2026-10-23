@@ -96,6 +96,7 @@ async function handle(id, dry) {
   if (dry) return console.log(`DRY: would merge ${id} (${head}) – ${title}`);
   const hash = merge(id, head, title);
   state.markMerged(id, hash);
+  fs.rmSync(path.join(AI, 'work', id), { recursive: true, force: true }); // the task's scratch folder
   const next = state.nextBlocked();
   if (!next) wake(`${id} merged as ${hash}; no written next task – write one`);
   state.release(next, hash);

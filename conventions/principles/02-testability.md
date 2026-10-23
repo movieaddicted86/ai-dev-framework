@@ -25,6 +25,9 @@ Testability is a design property, decided by the architecture in 01 before any t
 - **Tests are deterministic.** No sleeps as synchronisation, no dependence on test order, wall-clock time or
   network. A test that fails once in CI on an unrelated branch is a bug to fix now (race in the code or the
   test), not to re-run – "fixed as a test race" without a reproduction does not count.
+- **Sweep new guards against a real corpus.** A validation or safety rule is run over real-world data
+  (vendor profiles, production samples, recorded requests) before it is allowed to block anything: 0 false blocks,
+  or the rule is a warning. (A sweep over ~9,000 vendor presets found where "forbidden" commands are in fact standard output.)
 - **Mock only the boundary** you own (a port/adapter), never the unit under test, never deep internals.
 
 ## Definition of done (every task)

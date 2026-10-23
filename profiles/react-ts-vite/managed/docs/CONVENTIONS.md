@@ -70,6 +70,11 @@ See `docs/principles/02-testability.md`. In this stack:
 3. The touched E2E specs pass locally; the full suite runs in CI. An object-toolbar/sidebar/layout change always
    runs the spec that pins it.
 4. No console errors in the browser on the happy path.
+   A **destructive test suite** (E2E that deletes jobs, presets, files) refuses to run without an explicit target
+   (`E2E_BASE_URL`, no default) and a positive fixture marker that only the fixture data carries, checked before
+   the first write — one default URL would have wiped the developer's real instance.
+   A **flaky test** is reproduced (loop the file 50×) and fixed at its cause; timing assertions are relative to a
+   calibration run, not absolute milliseconds.
 5. Docs: changelog "Unreleased", user docs, UAT/acceptance list when user-visible.
 
 ## 6. Git

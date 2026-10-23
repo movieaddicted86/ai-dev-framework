@@ -46,7 +46,22 @@ Your auto-memory (loaded automatically) holds the decider's standing decisions �
 ## Writing a task
 Copy `.ai/templates/task.md`: goal, context with file paths, **binding decisions**, acceptance criteria, checks
 (the fast set + touched E2E specs only), docs, hand-back. One sitting – if it will not fit, split it. Add the STATE
-row (`blocked` until released) and the ROADMAP entry.
+row (`blocked` until released) and the ROADMAP entry. From the first project's 47 reviews:
+
+- **Verify facts before you write them** (vendor files, the real CLI, the current code). Wrong facts in a task were
+  the most common source of deviations: a "forbidden" command that the stock profile itself emits, a wrong file
+  name, a layer count.
+- **Every acceptance criterion must be able to fail.** Check that the example in the AC discriminates (five bars
+  that fit without the option prove nothing about the option).
+- **Name what pins the area** (specs, snapshots, docs that assert counts/labels/status codes) and require the
+  coder to run them. A toolbar change broke the same spec twice.
+- **Refactoring tasks** state the order — baseline capture → pin → move → compare — and name the evidence kit
+  (`playbooks/behaviour-preserving-refactoring.md`) and the before/after numbers to report.
+- **Base branch:** "`main` at `<hash>` or later"; the autopilot fills the hash on release.
+- **Shared append-only docs** (changelog, test-case lists): no running numbers in tasks (use the task id), so
+  parallel branches do not collide.
+- **High risk?** Say so in the title ("HIGH RISK", "SEC-n", "CRITICAL") — it keeps the task out of the autopilot.
+- **Scratch work** goes to `.ai/work/T-NNN/`; raw logs are referenced from the report, not pasted into it.
 
 ## Asking the decider
 Only for product/design decisions, roadmap or priority changes, anything outside the roadmap, and destructive or

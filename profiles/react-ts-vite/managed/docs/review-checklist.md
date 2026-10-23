@@ -9,6 +9,13 @@ Gated rules (CI) are not re-read by hand – check that CI is green, then spend 
 - [ ] Binding decisions are respected; `## Deviations` is honest (`None.` really means none).
 - [ ] Scope: nothing unrelated changed (diff stat matches the task); out-of-scope list respected.
 
+## 1b. Process hygiene
+- [ ] STATE row is `in_review`, branch pushed, report written (all three).
+- [ ] Nothing written into `.ai/` except STATE and the report; no leftover servers, containers, worktrees, build trees.
+- [ ] Commit granularity matches the task (one concern per commit; a justified exception is stated).
+- [ ] For refactorings: the baseline was captured before the first move; before/after numbers are in the report.
+- [ ] The report's evidence can be reproduced from the numbers given (counts, sizes), not adjectives.
+
 ## 2. Design (what linters cannot see)
 - [ ] One responsibility per new module; its purpose fits in one sentence without "and".
 - [ ] Domain logic lives in the pure core / shared package; UI, routes and slices only orchestrate.
