@@ -68,6 +68,7 @@ function pass() {
       out.end();
       savePid(null);
       console.log(`[runner] ${new Date().toLocaleString()} pass finished (exit ${code}${timedOut ? ', timed out' : ''})`);
+      if (code !== 0 && !timedOut) console.log('[runner] the pass failed – check the login / API environment of this terminal and the last lines of the log; the runner now waits for new input from the lead.');
       resolve();
     });
   });

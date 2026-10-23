@@ -17,7 +17,7 @@
 
 ## Needs a second project / real environment
 - [ ] Prove the profile on a second project (the real test of "what still sticks to WebSlicer").
-- [ ] Run the runner against the real `claude -p` once (the smoke test uses a fake coder).
+- [ ] Run `node test/live.mjs` in the coder terminal (real `claude -p`, needs login/OpenRouter env): the first attempt failed only on "Not logged in"; spawn, stream format, log and health were confirmed.
 - [ ] Test the CI template and the Dependabot config against a real GitHub project.
 
 ## Later

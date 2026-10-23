@@ -31,7 +31,8 @@ export function renderLine(line) {
     for (const c of ev.message?.content ?? []) if (c.type === 'tool_result' && c.is_error) out.push(`${time()}  ✗ ${clip(resultText(c), 200)}`);
   } else if (ev.type === 'result') {
     const min = ev.duration_ms ? ` · ${Math.round(ev.duration_ms / 60000)} min` : '';
-    out.push(`${time()}  ■ ${ev.subtype ?? 'done'}${min} · ${ev.num_turns ?? '?'} turns`);
+    // the CLI reports subtype "success" even when the run failed (not logged in, API error): is_error tells
+    out.push(`${time()}  ■ ${ev.is_error ? 'ERROR' : (ev.subtype ?? 'done')}${min} · ${ev.num_turns ?? '?'} turns`);
     if (ev.result) out.push(clip(ev.result, 600));
   }
   return out;
