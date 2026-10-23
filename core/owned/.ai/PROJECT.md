@@ -15,6 +15,12 @@ Owned by the project (the framework never overwrites this file). Generic rules: 
 ## Standard checks (the fast set every task runs before hand-back)
 {{standardChecks}}
 
+## Releases
+(Default rule from the first project; adapt or delete.) The lead never cuts a release on its own initiative: when a
+group of work packages is merged and CI on `{{baseBranch}}` is green it **proposes** the next release candidate in chat,
+the decider confirms. Then, from the lead worktree: bump all manifests with the version script, run the version
+check, move the changelog "Unreleased" block under the new version, commit, tag, push. Next planned release: (fill in).
+
 ## Risk
 Tasks whose title or text matches `risk.*` in `project.json` are never auto-merged. Add project-specific
 risk areas here (for example: authentication, payments, data migrations, CI configuration).

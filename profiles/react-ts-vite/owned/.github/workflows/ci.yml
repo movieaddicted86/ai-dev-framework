@@ -8,10 +8,11 @@ on:
 permissions:
   contents: read
 
-# a newer push to the same branch makes the older run pointless
+# a newer push to the same branch makes the older run pointless; the base branch is never cancelled (its runs
+# are the history the branch runs are compared with). Cancelled runs do not count as green (playbooks/ci-speed.md).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # The gate set of docs/principles/06-enforcement.md. Always runs, also for docs-only pushes.
@@ -56,17 +57,30 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # E2E sharded over three jobs (the full suite runs here, never in the coder's pass). Rebalance the shard
-  # weights with PWTEST_SHARD_WEIGHTS when one shard is much slower than the others.
+  # E2E sharded over jobs (the full suite runs here, never in the coder's pass). Playwright shards are contiguous
+  # file groups: PWTEST_SHARD_WEIGHTS (undocumented, QUOTE it) only moves the boundaries, and a `lock` serialises the
+  # whole file group, so keep one expensive locked file per shard. Re-check the split after every Playwright bump:
+  #   for i in 1 2 3; do npx playwright test --list --shard=$i/3; done
+  # Details and measurements: playbooks/ci-speed.md of ai-dev-framework.
   e2e:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The official Playwright image has the browsers and their system libraries: no install step (a cold
+    # `playwright install --with-deps` took up to 12 min). KEEP THE TAG EQUAL to @playwright/test in package.json
+    # (the Dependabot `playwright` group bumps both; the check step below fails with a clear message otherwise).
+    # `--ipc=host`: the default 64 MB /dev/shm crashes several Chromium instances.
+    container:
+      image: mcr.microsoft.com/playwright:v1.50.0
+      options: --ipc=host
     strategy:
       fail-fast: false
       matrix:
         shard: ['1/3', '2/3', '3/3']
+    env:
+      # PWTEST_SHARD_WEIGHTS: '12:10:11'   # per-group test counts, measured; quoted on purpose (YAML 1.1 sexagesimal)
+      CI: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -74,13 +88,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Cache the Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: playwright-${{ runner.os }}-
-      - run: npx playwright install --with-deps chromium
+      - name: Playwright image matches the installed Playwright
+        run: |
+          want=$(node -p "require('@playwright/test/package.json').version")
+          have=$(grep -o 'playwright:v[0-9.]*' .github/workflows/ci.yml | head -1 | sed 's/playwright:v//')
+          if [ "$want" != "$have" ]; then echo "::error::ci.yml uses the Playwright image v$have but the lock file resolves @playwright/test $want – update the image tag"; exit 1; fi
       - run: npm run build
       - name: Run the E2E shard
         run: npm run e2e -- --shard=${{ matrix.shard }}

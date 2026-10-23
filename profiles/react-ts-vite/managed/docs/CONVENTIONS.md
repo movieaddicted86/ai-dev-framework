@@ -73,6 +73,11 @@ See `docs/principles/02-testability.md`. In this stack:
    A **destructive test suite** (E2E that deletes jobs, presets, files) refuses to run without an explicit target
    (`E2E_BASE_URL`, no default) and a positive fixture marker that only the fixture data carries, checked before
    the first write — one default URL would have wiped the developer's real instance.
+   **E2E isolation** (needed for parallel workers): a fresh browser context per test, a per-context session or
+   autosave id, and a `server-state` lock for tests that mutate shared server state (printers, uploads, settings).
+   Expensive setup (a slice, an import) happens once per spec file and is memoised per worker; a fast profile is fine
+   where the assertion does not depend on quality. Speeding up a suite never removes or weakens an assertion — the
+   report lists test and assertion counts before/after.
    A **flaky test** is reproduced (loop the file 50×) and fixed at its cause; timing assertions are relative to a
    calibration run, not absolute milliseconds.
 5. Docs: changelog "Unreleased", user docs, UAT/acceptance list when user-visible.

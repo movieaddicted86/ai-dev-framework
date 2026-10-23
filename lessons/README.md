@@ -1,14 +1,14 @@
 # Lessons learned
 
 Each lesson: what happened → the rule it produced → where the rule lives now.
-Source: the first project (WebSlicer: 47 reviewed tasks, ~330 commits, one lead model + one cheaper coder model,
-6 decision files, 2 independent code reviews). Evaluated from all 47 review files, the *Deviations* and *Notes* of all
-50 reports, the decision files and the protocol history. Statistics and the review-finding taxonomy:
+Source: the first project (WebSlicer: 48 reviewed tasks up to T-057, ~340 commits, one lead model + one cheaper coder
+model, 6 decision files, 2 independent code reviews). Evaluated from all review files, the *Deviations* and *Notes* of
+all reports, the decision files and the protocol history; last synchronised with WebSlicer at `1aeb557` (T-057 merged). Statistics and the review-finding taxonomy:
 [review-findings.md](review-findings.md). Standing decisions for the lead's memory: [lead-memory-seeds.md](lead-memory-seeds.md).
 
 ## At a glance
 
-- **37 of 47 tasks were approved in the first round**, 10 needed a second (one a third) — most of those returns
+- **37 of 48 tasks were approved in the first round**, 11 needed a second (two a third) — most of those returns
   were CI failures the coder could have caught locally with a cheap check (see P-series), not design problems.
 - The expensive failures were never about code volume: they were **waiting** (E2E and CI polling), **context rot**
   (long sessions), **unverified facts in task descriptions**, and **rules that nothing enforced**.
@@ -39,6 +39,11 @@ Source: the first project (WebSlicer: 47 reviewed tasks, ~330 commits, one lead 
 | L18 | The lead's task text contained wrong facts and self-contradicting ACs: M906/M907 "block" vs. "0 blocks on real slicer output" (T-031); an AC example that could not discriminate (T-043); a wrong file name (T-045); the layer count (T-004). The *Deviations* mechanism caught all of them. | Writing a task includes verifying facts against the source (vendor files, the real CLI) and checking that every AC can fail; the coder's duty to stop and report a contradiction stays | LEAD.md "Writing a task" |
 | L19 | An external review came as a list of 40 findings; taken 1:1 it would have produced wrong work. The lead verified each claim against the code (confirmed / partly / false) and found a worse issue (RCE bypass of our own security fix). | Intake of external reviews: verify every claim with file:line evidence, assign a verdict, fold into ordered packages | playbooks/external-review-intake.md |
 | L20 | The baseline capture for a refactoring was taken *after* the moves (T-018); all services moved in one 19-file commit (T-021). Both were accepted only because other pins existed. | Order is part of the task: capture → pin → move; one concern per commit unless the compiler forbids a split (then say so) | playbooks/behaviour-preserving-refactoring.md |
+| L21 | T-057 set "≤ 8 min CI wall time" from a guess. Three rounds later: 24 → 12.7 min, same 117 tests; the target was not reachable with this runner and suite (42 min of test time, ~1.3–1.9× effective speedup per shard, ~3 min fixed cost per shard). The decider accepted "12 instead of 24 is fine". | A performance target is derived from measurements (total work ÷ parallelism + fixed cost) before it becomes an AC, and the task names the acceptable fallback; the coder reports the ceiling and the levers instead of grinding | LEAD.md "Writing a task", playbooks/ci-speed.md |
+| L22 | The coder probed whether a CI run could be re-run by sending the write request — it triggered and cancelled a real run. | CI is read-only for the coder: no write call to an external service is ever used as a probe; the read-only token enforces it | PROTOCOL.md |
+| L23 | AC "three consecutive green runs" collided with the new "cancel stale runs" measure: two pushes were cancelled by the next push and did not count. | Check that ACs do not contradict the measures of the same task | LEAD.md "Writing a task" |
+| L24 | A task whose deliverable *is* CI speed legitimately needs the coder to wait for CI; the general budget forbids it. | A task may override the verification budget explicitly and by name; otherwise the budget stands | task template, PROTOCOL.md |
+| L25 | Release candidates were cut per group of packages, never on the lead's initiative: the lead proposes when a group is merged and CI on the base branch is green; the human confirms; then version bump script + `version:check`, changelog block moved, tag, push. | Release policy is an explicit standing rule per project | PROJECT.md "Releases" |
 
 ## Verification and quality (P-series)
 
@@ -54,6 +59,9 @@ Source: the first project (WebSlicer: 47 reviewed tasks, ~330 commits, one lead 
 | P8 | The E2E suite, run by `npm run e2e`, would have deleted the human's real jobs and presets on `localhost:8080` (T-030 r1). | A destructive test suite refuses to run without an explicit target and a positive fixture marker, checked before the first write | profile CONVENTIONS §5 |
 | P9 | CI wall time was 26–29 min per push → 3 weighted shards (6–11 min warm). The browser install (11 s to 12 min), not the suite, was the unstable part; a containerised runner, one shared build and cancel-stale are planned (T-057, not yet merged). | Shard by measured time; cache browsers; cancel stale runs; docs-only pushes skip E2E | profile CI template |
 | P10 | A TypeScript major was held until typescript-eslint caught up; React 19 / Vite 7 / Express 5 / TS 6 each went in as their own task with the net green first. | Upgrade runbook; grouped bot PRs; documented holds | playbooks/upgrade-major-dependency.md |
+| P11 | Making E2E fast (T-057): official Playwright container (no 12-min cold browser install), `--ipc=host`, image tag derived from `package.json`; one build job owns the cache scope and shards only `--load` it (a `docker save` artifact would be ~430 MB per shard); cancel stale runs except on the base branch. | CI template and playbook | profile ci.yml, playbooks/ci-speed.md |
+| P12 | Parallel workers need isolation, not serialisation: fresh browser context per test, per-context autosave/session id, a `server-state` test lock for tests that mutate shared server state; one expensive setup (a slice) per spec file, memoised per worker, with a fast profile where quality does not matter — and **no assertion removed** (list test/assertion counts before/after). | E2E conventions | profile CONVENTIONS §5 |
+| P13 | Playwright shards are **contiguous file groups**: weights only move the boundaries; a `lock` attaches to the whole group, so two locked files in one shard run strictly one after the other (cost 10.6 min once). Keep one expensive locked file per shard; re-check the assignment after every Playwright bump (`--list --shard=i/n`). `PWTEST_SHARD_WEIGHTS` is undocumented → quote it in YAML (`33:23:32:29` is a sexagesimal integer to YAML 1.1) and keep the fallback in mind. | playbook | playbooks/ci-speed.md |
 
 ## Engineering (E-series)
 

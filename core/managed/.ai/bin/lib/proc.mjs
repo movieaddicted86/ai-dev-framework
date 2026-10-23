@@ -7,10 +7,12 @@ const win = process.platform === 'win32';
 export function processes() {
   if (win) {
     const ps =
-      'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine,' +
+      '[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine,' +
       "@{n='Start';e={[int64](($_.CreationDate.ToUniversalTime()) - [datetime]'1970-01-01').TotalMilliseconds}} | ConvertTo-Json -Compress";
     const out = execSync(`powershell -NoProfile -Command "${ps.replace(/"/g, '\\"')}"`, { encoding: 'utf8', maxBuffer: 64 << 20 });
-    return JSON.parse(out).map((p) => ({ pid: p.ProcessId, ppid: p.ParentProcessId, name: p.Name, cmd: p.CommandLine || '', start: p.Start }));
+    // some command lines (a pasted "→", a script body) leave a raw control character in the JSON string: blank them
+    // out of the text, a compressed document has no legitimate control characters
+    return JSON.parse(out.replace(/[\u0000-\u001f]/g, ' ')).map((p) => ({ pid: p.ProcessId, ppid: p.ParentProcessId, name: p.Name, cmd: p.CommandLine || '', start: p.Start }));
   }
   const out = execSync('ps -eo pid=,ppid=,etime=,comm=,args=', { encoding: 'utf8', maxBuffer: 64 << 20 });
   const now = Date.now();

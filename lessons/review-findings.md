@@ -1,7 +1,7 @@
 # Review findings: statistics and taxonomy (WebSlicer, T-001…T-047)
 
-Base: 47 tasks reviewed. **37 approved in round 1**; 10 returned (T-001, T-015, T-026, T-030, T-031 ×2, T-033,
-T-038, T-040, T-042, T-044). 12 refactoring tasks (R-1…R-12) were all approved in round 1.
+Base: 48 tasks reviewed (up to T-057). **37 approved in round 1**; 11 returned (T-001, T-015, T-026, T-030, T-031 ×2,
+T-033, T-038, T-040, T-042, T-044, T-057 ×2). 12 refactoring tasks (R-1…R-12) were all approved in round 1.
 
 ## Why tasks came back
 
@@ -16,6 +16,7 @@ T-038, T-040, T-042, T-044). 12 refactoring tasks (R-1…R-12) were all approved
 | **Event-loop blocking sync I/O in a request path**, then a `done`-before-`info` race | T-031 ×2 | review (design), then a pin | async-fs rule, derived-data-before-state rule |
 | **Safety of the test suite itself** (would run against a real instance) + CI too slow (26–29 min) + no failure-artifact proof | T-030 | review | destructive-suite guard, sharding by measured time |
 | **Round 2 of an interlocking change** (merged with T-034) | T-033 | n/a | — |
+| **Unreachable target / self-contradicting ACs** (≤ 8 min CI; "three green runs" vs. cancel-stale), plus a write call used as a probe that cancelled a run | T-057 (3 rounds; accepted at 12.7 min) | yes, a capacity estimate before writing the AC | targets from measurements, ACs consistent, CI read-only for the coder (L21–L23) |
 
 **Takeaway:** 5 of the 10 returns were avoidable by running one more *cheap* local check. The remaining 5 were
 genuine design/correctness findings that only a reviewer's independent thinking found — which is what the lead is for.

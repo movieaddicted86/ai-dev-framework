@@ -55,6 +55,9 @@ row (`blocked` until released) and the ROADMAP entry. From the first project's 4
   that fit without the option prove nothing about the option).
 - **Name what pins the area** (specs, snapshots, docs that assert counts/labels/status codes) and require the
   coder to run them. A toolbar change broke the same spec twice.
+- **Performance targets come from measurements** (total work ÷ parallelism + fixed cost), with an acceptable
+  fallback named in the task. A guessed target ("≤ 8 min") cost three rounds and was accepted at 12.7 min.
+- **ACs must not contradict the task's own measures** ("three consecutive green runs" vs. "cancel stale runs").
 - **Refactoring tasks** state the order — baseline capture → pin → move → compare — and name the evidence kit
   (`playbooks/behaviour-preserving-refactoring.md`) and the before/after numbers to report.
 - **Base branch:** "`main` at `<hash>` or later"; the autopilot fills the hash on release.

@@ -92,6 +92,10 @@ CI polling; the model itself needed ~30 min). So:
   the merge. Never leave servers, containers, worktrees or build trees outside the repo behind.
 - **Before a hand-back, run the cheap checks that CI would fail on:** typecheck, lint, format check, unit tests,
   plus the one spec that pins the structure you changed. Most returned tasks failed on exactly those.
+- **CI and other external services are read-only for the coder.** Never call a write endpoint (re-run, cancel,
+  dispatch) to "see what happens": it can cancel a real run. Reading is the lead's job anyway (read-only token).
+- **A task may override the verification budget, but only by name** (for example a task whose deliverable is CI
+  speed may require the coder to wait for CI). Without that sentence in the task the budget stands.
 - **A flaky or racy test is a bug:** reproduce it (run the file in a loop), find the cause, fix the code or the
   test. "Fixed as a test race" without a reproduction does not count.
 - **Report evidence is a summary** (about 40 lines): commands with their result lines, counts, sizes. Raw logs
