@@ -6,12 +6,13 @@
 - [x] `eslint.base.mjs` verified on a sample project (max-lines, any, floating promises, layer boundary, suppressions ratchet).
 
 ## Next (derived from the lessons)
-- [ ] `ai handback T-NNN`: validate the report (required sections, `Deviations` present, evidence ≤ ~40 lines), check
-  the branch is pushed, then set `in_review` — one atomic step (lesson L13).
+- [x] `ai handback T-NNN` (L13, L28), `ai merge`, post-merge CI watch, single-instance locks, overlapping-pass and credits diagnosis.
 - [ ] `ai task lint T-NNN`: a new task has goal, binding decisions, ACs, checks, out-of-scope, a base branch (L18).
 - [ ] `ai report` (lead): summary of a report for the review (Deviations, evidence numbers, diff stat, CI) — token saver.
 - [ ] Autopilot: refuse to auto-merge when the report names no CI run / sha, or the diff touches `.github/workflows`.
-- [ ] Pinning-specs table → machine-readable (`project.json: pins[]`) so `ai doctor` or the task lint can require the spec.
+- [ ] `ai doctor`: warn when `handback.pins` is empty although `PROJECT-CONVENTIONS.md` lists pinning specs.
+- [ ] Checklist generator for the human acceptance test (`ai accept-test` → HTML with ids) and a `FINDINGS.md` template.
+- [ ] Optional `ai handover` that fills `HANDOVER.md` from STATE/ROADMAP/git (the lead edits the rest).
 - [ ] Mine the 50 reports' *Evidence* and the 100+ `.claude/` probe scripts for reusable verification helpers
   (REST smoke diff main vs branch, store snapshot diff, pixel diff) → `tools/` of the framework.
 

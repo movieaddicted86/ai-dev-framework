@@ -6,7 +6,8 @@
 2. **Install the framework:** `node <framework>/bootstrap.mjs init <project> --name <name> --repo <owner/name>
    [--profile react-ts-vite] [--chat-language German] [--repo-language English] [--model <coder model>]`.
    Use `--track-ai` if `.ai/` should be versioned (audit trail, second machine); default is git-ignored.
-3. **Fill the owned files:** `.ai/project.json`, `.ai/PROJECT.md` (standing permissions, risk areas, machine notes),
+3. **Commit the installed files** (everything outside the git-ignored `.ai/`: `docs/`, `eslint.*`, CI, …) — `ai handback` requires a clean tree.
+   **Fill the owned files:** `.ai/project.json`, `.ai/PROJECT.md` (standing permissions, risk areas, machine notes),
    `docs/PROJECT-CONVENTIONS.md` (the project in one paragraph, domain rules).
 4. **Make the gates real:** add the scripts, run `npx eslint . --suppress-all` if the code base already has
    violations (ratchet), commit the CI workflow, create the read-only CI token file named in `project.json`.

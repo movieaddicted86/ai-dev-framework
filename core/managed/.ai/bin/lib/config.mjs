@@ -51,6 +51,9 @@ const DEFAULTS = {
     titlePattern: 'high risk|critical|\\bsec-\\d|security hardening|\\bci\\b',
     taskPattern: 'high risk|\\.github/workflows',
   },
+  // `ai handback`: cheap checks that must pass (commands run in the checkout) and pinning specs
+  // pins: [{ when: '<regex on changed file paths>', spec: 'e2e/specs/x.spec.ts', run: 'npx playwright test …' }]
+  handback: { checks: [], pins: [] },
   lead: { idleWakeHours: 8, healthEveryMin: 5, pollSec: 30 },
 };
 

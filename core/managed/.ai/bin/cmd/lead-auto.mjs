@@ -3,23 +3,24 @@
 //   report in_review + not high-risk + no deviations + CI green on the branch head
 //     → merge --no-ff into the base branch in the lead worktree, push, STATE → merged, auto review,
 //       release the next written (blocked) task in STATE order
+//   after every merge the CI of the merge commit on the base branch is watched: a green branch can still give a red
+//   base (two branches that interact) – that wakes the lead too
 // Everything else exits with "LEAD WAKE: …" so the lead session is woken:
 //   deviations, high-risk task, CI red, merge conflict, no written next task, a decision file,
-//   a coder health issue (every few minutes), a long idle time.
+//   a coder health issue (every few minutes), a long idle time, a second autopilot running.
 // --manual: never merge, wake the lead on every new hand-back (the pre-autopilot loop).
 // DRY_RUN=1 prints the decisions without merging or editing.
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { AI, ROOT, cfg } from '../lib/config.mjs';
 import { ciStatus, failedJobs } from '../lib/ci.mjs';
+import { acquireLock } from '../lib/lock.mjs';
+import { MergeFailure, branchHead, mergeBranch, waitForCi } from '../lib/merge.mjs';
 import { sleep } from '../lib/proc.mjs';
 import * as state from '../lib/state.mjs';
 import health from './health.mjs';
 
 const MARK = path.join(AI, '.lead-seen');
-const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
 class Wake extends Error {}
 const wake = (msg) => {
@@ -36,67 +37,42 @@ function newerFiles(dir, since) {
     .sort();
 }
 
-/** merge in the lead worktree; returns the merge commit's short hash */
-function merge(id, head, title) {
-  const wt = cfg.leadWorktree;
-  if (!fs.existsSync(wt)) wake(`${id}: lead worktree ${wt} does not exist – run: node .ai/bin/ai.mjs doctor`);
+/** merge commits whose CI on the base branch has not been confirmed yet (kept across the autopilot's exits) */
+const MC_FILE = path.join(AI, '.main-checks.json');
+const mainChecks = (() => {
   try {
-    git(wt, 'checkout', '-q', cfg.baseBranch);
-    git(wt, 'pull', '-q', '--ff-only', 'origin', cfg.baseBranch);
-  } catch (e) {
-    wake(`${id}: cannot update ${cfg.baseBranch} in ${wt}: ${e.stderr || e.message}`);
-  }
-  const msgFile = path.join(os.tmpdir(), `ai-merge-${process.pid}.txt`);
-  fs.writeFileSync(
-    msgFile,
-    `Merge ${id}: ${title}\n\nAuto-merged by the lead autopilot: CI green on ${head}, report without\ndeviations. Implemented by the coding agent.\n\n${cfg.mergeTrailer}\n`,
-  );
-  try {
-    git(wt, 'merge', '--no-ff', '-q', '-F', msgFile, `origin/${cfg.branchPrefix}${id}`);
+    return JSON.parse(fs.readFileSync(MC_FILE, 'utf8'));
   } catch {
-    try {
-      git(wt, 'merge', '--abort');
-    } catch {
-      /* nothing to abort */
-    }
-    wake(`${id}: merge conflict with ${cfg.baseBranch} – resolve manually in ${wt}`);
-  } finally {
-    fs.rmSync(msgFile, { force: true });
+    return [];
   }
-  try {
-    git(wt, 'push', '-q', 'origin', cfg.baseBranch);
-  } catch (e) {
-    wake(`${id}: push failed in ${wt}: ${e.stderr || e.message}`);
-  }
-  return git(wt, 'rev-parse', '--short', 'HEAD');
-}
+})();
+const saveChecks = () => fs.writeFileSync(MC_FILE, JSON.stringify(mainChecks));
 
 async function handle(id, dry) {
   if (state.risky(id)) wake(`${id} needs a lead review (high-risk task)`);
   if (state.deviations(id) !== 'none') wake(`${id} needs a lead review (report lists deviations)`);
-  try {
-    git(ROOT, 'fetch', '-q', 'origin');
-  } catch {
-    wake(`${id}: git fetch failed`);
-  }
   let head;
   try {
-    head = git(ROOT, 'rev-parse', '--short', `origin/${cfg.branchPrefix}${id}`);
-  } catch {
-    wake(`${id}: branch origin/${cfg.branchPrefix}${id} not found`);
+    head = branchHead(id);
+  } catch (e) {
+    if (e instanceof MergeFailure) wake(e.message);
+    throw e;
   }
-  let ci = 'error';
-  for (let i = 0; i < Math.ceil((cfg.ci.waitMin * 60) / cfg.ci.pollSec); i++) {
-    ci = await ciStatus(head).catch(() => 'error');
-    if (['success', 'failure', 'cancelled', 'error'].includes(ci)) break;
-    await sleep(cfg.ci.pollSec * 1000);
-  }
+  const ci = await waitForCi(head);
   if (ci !== 'success') wake(`${id}: CI on ${head} is '${ci}' – ${await failedJobs(head).catch(() => '')}`);
   const title = state.title(id);
   if (dry) return console.log(`DRY: would merge ${id} (${head}) – ${title}`);
-  const hash = merge(id, head, title);
+  let hash;
+  try {
+    hash = mergeBranch(id, head, title);
+  } catch (e) {
+    if (e instanceof MergeFailure) wake(e.message);
+    throw e;
+  }
   state.markMerged(id, hash);
   fs.rmSync(path.join(AI, 'work', id), { recursive: true, force: true }); // the task's scratch folder
+  mainChecks.push({ id, hash, since: Date.now() });
+  saveChecks();
   const next = state.nextBlocked();
   if (!next) wake(`${id} merged as ${hash}; no written next task – write one`);
   state.release(next, hash);
@@ -104,9 +80,25 @@ async function handle(id, dry) {
   console.log(`${new Date().toTimeString().slice(0, 5)} auto: merged ${id} as ${hash}, released ${next}`);
 }
 
+async function checkMain() {
+  for (const m of [...mainChecks]) {
+    const s = await ciStatus(m.hash).catch(() => 'error');
+    if (s === 'success') (mainChecks.splice(mainChecks.indexOf(m), 1), saveChecks());
+    else if (s === 'failure' || s === 'cancelled') wake(`CI on ${cfg.baseBranch} is '${s}' after merging ${m.id} (${m.hash}) – ${await failedJobs(m.hash).catch(() => '')}`);
+    else if (Date.now() - m.since > cfg.ci.waitMin * 60e3) wake(`no CI result on ${cfg.baseBranch} for the merge of ${m.id} (${m.hash}) after ${cfg.ci.waitMin} min`);
+  }
+}
+
 export default async function leadAuto(argv = []) {
   const manual = argv.includes('--manual');
   const dry = process.env.DRY_RUN === '1';
+  if (!dry) {
+    const lock = acquireLock('lead-auto');
+    if (!lock.ok) {
+      console.log(`LEAD WAKE: another autopilot is running (pid ${lock.pid}, since ${new Date(lock.since).toLocaleString()}) – stop it first; two autopilots race on the same merge`);
+      return 0;
+    }
+  }
   if (!fs.existsSync(MARK)) {
     // a fresh marker is "never seen anything": reports written before the first start are still pending
     fs.writeFileSync(MARK, '');
@@ -119,6 +111,7 @@ export default async function leadAuto(argv = []) {
       const since = fs.statSync(MARK).mtimeMs;
       const dec = newerFiles('decisions', since);
       if (dec.length) wake(`decision file changed: ${dec.map((f) => path.relative(ROOT, f)).join(', ')}`);
+      await checkMain();
       const id = state.pending();
       if (id) {
         if (manual) wake(`new coder report: .ai/reports/${id}.md`);

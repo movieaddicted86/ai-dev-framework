@@ -47,8 +47,12 @@ All commands below are `node .ai/bin/ai.mjs <command>` (short: `ai <command>`).
    branch, never merge, never edit files in `.ai/` other than `STATE.md` and your report.
 4. Verify exactly as the task's "Checks" section says. Commit (one commit per logical step, `Co-Authored-By:`
    names your model) and push the branch.
-5. Write `reports/T-NNN.md` (template), set the task to `in_review` in `STATE.md`. `## Deviations` holds only
-   real deviations from binding decisions/ACs (`None.` otherwise); remarks go to `## Notes`.
+5. Write `reports/T-NNN.md` (template). `## Deviations` holds only real deviations from binding decisions/ACs
+   (`None.` otherwise); remarks go to `## Notes`. Then run **`node .ai/bin/ai.mjs handback T-NNN`**: it checks that
+   you are on the task's branch with a clean tree and HEAD pushed, that the report is complete, that the project's
+   cheap checks pass (`handback.checks` in `project.json`: typecheck, lint, format, unit tests, build) and that the
+   pinning specs of the touched areas are named in the Evidence — and only then sets `in_review`. If it lists
+   problems, fix them and run it again. Do not set `in_review` by hand.
 6. Start the watcher **as a background command** and stop: `node .ai/bin/ai.mjs wait`. When it exits you are
    woken up automatically → go to step 1. Always re-arm the watcher before you stop.
 
@@ -85,8 +89,11 @@ CI polling; the model itself needed ~30 min). So:
   answers in `reviews/` or asks the decider via `decisions/`.
 - **Scope:** change only what the task needs. Unrelated findings go into the report's Notes. A fix of the same
   rule in a second place is in scope (own commit); anything else is a Note.
-- **Hand-back is one step:** push the branch, write the report, set the STATE row to `in_review` — in that order,
-  and never forget the row (a task left `in_progress` makes the runner treat it as unfinished work).
+- **Hand-back is one step:** push the branch, write the report, run `ai handback T-NNN` — it sets the STATE row
+  (a task left `in_progress` makes the runner treat it as unfinished work; an unpushed branch cannot be merged).
+- **One pass per checkout:** before taking a task, check for another live coder pass (a newer `claude` process, a
+  fresher `.ai/logs/coder-*.jsonl`). If a newer one is already on the task, end with "nothing to do" and do not fight
+  it — two passes commit, run containers and edit STATE.md on the same files.
 - **Scratch:** all temporary files (probes, captures, comparison trees, logs) go to `.ai/work/T-NNN/`; the
   coder writes nothing else into `.ai/` except `STATE.md` and its report. The autopilot removes the folder after
   the merge. Never leave servers, containers, worktrees or build trees outside the repo behind.

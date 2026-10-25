@@ -58,9 +58,12 @@ try {
   git(proj, 'push', '-q', 'origin', 'main');
 
   ok(sh('node', [path.join(FW, 'bootstrap.mjs'), 'init', proj, '--name', 'sandbox', '--repo', 'o/sandbox']).code === 0, 'bootstrap init');
+  git(proj, 'add', '-A'); // the installed files belong to the project: hand-back needs a clean tree
+  git(proj, 'commit', '-q', '-m', 'Install ai-dev-framework');
+  git(proj, 'push', '-q', 'origin', 'main');
   const pjPath = path.join(proj, '.ai', 'project.json');
   const pj = JSON.parse(fs.readFileSync(pjPath, 'utf8'));
-  Object.assign(pj, { leadWorktree: lead, ci: { provider: 'none' }, coder: { args: MODEL === 'default' ? [] : ['--model', MODEL], passTimeoutMin: 15 }, lead: { pollSec: 2, healthEveryMin: 999 } });
+  Object.assign(pj, { leadWorktree: lead, ci: { provider: 'none' }, coder: { args: MODEL === 'default' ? [] : ['--model', MODEL], passTimeoutMin: 15 }, lead: { pollSec: 2, healthEveryMin: 999 }, handback: { checks: ['npm test'], pins: [] } });
   fs.writeFileSync(pjPath, JSON.stringify(pj, null, 2));
   const projectMd = path.join(proj, '.ai', 'PROJECT.md');
   fs.writeFileSync(projectMd, fs.readFileSync(projectMd, 'utf8').replace(/## Standard checks[\s\S]*?(?=\n## )/, '## Standard checks\n- `npm test`\n'));

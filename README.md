@@ -10,11 +10,11 @@ Read [MANIFEST.md](MANIFEST.md) first (ten commitments), then [lessons/](lessons
 
 | Path | Content |
 |---|---|
-| `core/managed/.ai/` | protocol, lead handbook, templates, and the Node CLI (`bin/ai.mjs`: `run`, `wait`, `lead-auto`, `health`, `doctor`, `ci`, `task`) — **cross-platform, dependency-free** |
+| `core/managed/.ai/` | protocol, lead handbook, templates, and the Node CLI (`bin/ai.mjs`: `run`, `handback`, `lead-auto`, `merge`, `wait`, `health`, `doctor`, `ci`, `task`) — **cross-platform, dependency-free** |
 | `core/owned/` | seeds written once: `STATE.md`, `ROADMAP.md`, `PROJECT.md`, `project.json`, coder permissions, `CLAUDE.local.md` |
 | `conventions/principles/` | stack-neutral principles: architecture, testability, maintainability, security baseline, change management, enforcement |
 | `profiles/react-ts-vite/` | the first stack profile: conventions, coding guidelines, ESLint base config with size/complexity/boundary gates, technology radar, review checklist, CI and Dependabot templates |
-| `playbooks/` | project start, audit → refactoring, major upgrades, security review, coder hang diagnosis |
+| `playbooks/` | project start, audit → refactoring, behaviour-preserving refactoring, external review intake, UI rebuild, human acceptance test, CI speed, major upgrades, security review, coder hang diagnosis |
 | `lessons/` | what went wrong or right, and the rule it produced |
 | `bootstrap.mjs` | `init` a project, `upgrade` it later |
 

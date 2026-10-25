@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { AI, ROOT, cfg } from '../lib/config.mjs';
+import { acquireLock } from '../lib/lock.mjs';
 import { killTree } from '../lib/proc.mjs';
 import { actionable } from '../lib/state.mjs';
 import { renderLine } from '../lib/view.mjs';
@@ -22,8 +23,11 @@ const PROMPT =
   `You are the coder (see CLAUDE.local.md). Runner mode: read .ai/PROTOCOL.md and .ai/STATE.md, then run ONE pass of ` +
   `the coder loop (steps 1-5) for the task it picks. Do not start \`${cli} wait\` and never ask questions - the runner ` +
   `restarts you with a fresh context for the next input. Before you end, stop every background command, server, ` +
-  `container or wait loop you started (the pass cannot exit while one is still running). End when the hand-back is ` +
-  `done (branch pushed, report written, status in_review) or when there is nothing to do.`;
+  `container or wait loop you started (the pass cannot exit while one is still running). Before you take a task, ` +
+  `check whether another coder pass (a newer claude process, a fresher .ai/logs file) is already working on it; if ` +
+  `so end with "nothing to do". Finish the hand-back with \`${cli} handback T-NNN\` (it checks branch, report and the ` +
+  `project's cheap checks and sets in_review; fix what it lists and run it again). End when it printed "Handed back" ` +
+  `or when there is nothing to do.`;
 
 const savePid = (pass) => fs.writeFileSync(PIDFILE, JSON.stringify({ pid: process.pid, pass, at: Date.now() }));
 
@@ -75,6 +79,8 @@ function pass() {
 }
 
 export default async function run() {
+  const lock = acquireLock('runner');
+  if (!lock.ok) return (console.log(`[runner] another runner is active (pid ${lock.pid}, since ${new Date(lock.since).toLocaleString()}) – two runners would work on the same checkout. Stop it first.`), 1);
   fs.mkdirSync(LOGS, { recursive: true });
   savePid(null);
   process.on('SIGINT', () => (fs.rmSync(PIDFILE, { force: true }), process.exit(130)));

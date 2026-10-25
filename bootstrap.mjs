@@ -100,6 +100,12 @@ function init(opts) {
   for (const [rel, src] of ownedFiles(profile)) {
     if (fs.existsSync(path.join(target, rel))) continue;
     let text = fill(fs.readFileSync(src, 'utf8'), vars);
+    if (rel === '.ai/project.json' && pj.projectJson) {
+      const merged = JSON.parse(text);
+      for (const [k, v] of Object.entries(pj.projectJson)) merged[k] = v && typeof v === 'object' && !Array.isArray(v) ? { ...(merged[k] ?? {}), ...v } : v;
+      text = `${JSON.stringify(merged, null, 2)}
+`;
+    }
     if (rel === '.ai/coder-settings.json') {
       const s = JSON.parse(text);
       s.permissions.allow.push(...(pj.coderAllow ?? []));
@@ -113,7 +119,7 @@ function init(opts) {
   write(target, LOCK, `${JSON.stringify(lock, null, 2)}\n`);
 
   // volatile workflow files never belong in a commit, whether or not .ai/ itself is tracked
-  write(target, '.ai/.gitignore', 'logs/\ntmp/\nwork/\n.coder-seen\n.lead-seen\n.runner.json\n.health-last\n');
+  write(target, '.ai/.gitignore', 'logs/\ntmp/\nwork/\n.coder-seen\n.lead-seen\n.runner.json\n.health-last\n.main-checks.json\n.*.lock\nscratch/\n');
   const ignore = ['CLAUDE.local.md', ...(opts.trackAi ? [] : ['.ai/'])];
   ensureLines(path.join(target, '.gitignore'), ignore);
 

@@ -72,6 +72,15 @@ export function markMerged(id, hash) {
   );
 }
 
+/** merged after a review by the lead: keeps the lead's review file */
+export function setMerged(id, hash, note = 'approved by the lead') {
+  setRow(id, 'merged', `${note}, merged as \`${hash}\``);
+}
+
+export function setStatus(id, status, note) {
+  setRow(id, status, note);
+}
+
 /** open the task for the coder: STATE row, base hash in the task file, touch the file (wakes the coder) */
 export function release(id, hash) {
   setRow(id, 'open', `released by the autopilot; base \`${cfg.baseBranch}\` at \`${hash}\``);

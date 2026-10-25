@@ -108,6 +108,15 @@ export default function health(argv = []) {
     if (now - passProc.start > (cfg.coder.passTimeoutMin / 60 - 1) * 3600000) notes.push(`pass ${passProc.pid} runs for ${min(now - passProc.start)} min (killed at ${cfg.coder.passTimeoutMin} min)`);
   }
 
+  // two live passes in one checkout fight over the same files (seen in the first project: an old pass held the tree
+  // for an hour while the newer one was already on the next task)
+  const shell = (p) => /^(cmd|sh|bash)(\.exe)?$/i.test(p.name);
+  const streaming = all.filter((p) => p.cmd.includes('--output-format stream-json') && !shell(p));
+  const passes = streaming.filter((p) => !streaming.some((q) => q.pid === p.ppid));
+  if (passes.length > 1) {
+    issues.push(['overlapping_passes', `${passes.length} coder passes are alive at once:\n  ${passes.map((p) => `${p.pid} started ${min(now - p.start)} min ago`).join('\n  ')}\n  keep the newest, kill the older ones (taskkill /PID <pid> /T /F or kill)`]);
+  }
+
   cleanContainers(notes);
 
   // idleness counts from the later of the last pass and the last lead input (a task is often released only
@@ -123,7 +132,9 @@ export default function health(argv = []) {
     }),
   );
   if (runnerAlive && !passProc && work.length && log && now - Math.max(log.t, leadInput) > cfg.coder.idleMin * 60000) {
-    const why = result?.is_error || /API Error/.test(result?.result || '') ? `last pass ended with: ${clip(result.result, 200)}` : 'last pass ended normally';
+    const err = result?.is_error || /API Error/.test(result?.result || '');
+    const credits = /\b402\b|credit/i.test(result?.result || '') ? ' – the API account looks out of credits: top it up, then touch a task file to start a pass' : '';
+    const why = err ? `last pass ended with: ${clip(result.result, 200)}${credits}` : 'last pass ended normally';
     issues.push(['idle_with_work', `no pass for ${min(now - log.t)} min although STATE.md has work (${why}):\n  ${work.join('\n  ')}`]);
   }
   if (result?.is_error || /API Error/.test(result?.result || '')) notes.push(`last result is an error: ${clip(result.result, 200)}`);

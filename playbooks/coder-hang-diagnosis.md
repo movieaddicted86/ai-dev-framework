@@ -8,6 +8,8 @@
 | `stalled` | no log event for `coder.stallMin` minutes while a pass runs | look at the listed child processes: a dev server or watch command that never ends → kill it; the pass continues. Waiting on the API → wait or restart the runner |
 | `hung_after_result` | the pass already wrote its final result but the process lives on, held open by a background command | automatic: the children are killed. If it repeats, find which command the coder starts in the background and forbid it in PROTOCOL/the task |
 | `idle_with_work` | STATE.md has work, no pass for `coder.idleMin` | usually the last pass ended in an API error (shown) → touch the task file to trigger a new pass; if repeated, the task is unclear → rewrite it smaller |
+| `overlapping_passes` | two coder passes alive in one checkout | keep the newest, kill the older (`taskkill /PID <pid> /T /F`); the runner lock prevents two runners, the prompt tells a pass to stand down when a newer one is on the task |
+| `idle_with_work` and "out of credits" in the reason | the API account ran dry (HTTP 402) | top it up, then touch a task file — the runner starts the next pass, no restart |
 | container leftovers | test containers of merged tasks pile up | `coder.cleanupContainers: true` removes them |
 
 Root causes seen in practice and their rules:

@@ -23,8 +23,15 @@ process.stdin.on('end', () => {
   git('commit', '-q', '-m', `Add ${id}`);
   git('push', '-q', 'origin', `feature/${id}`);
   const deviations = process.env.FAKE_DEVIATIONS === '1' ? 'Used a different library.' : 'None.';
-  fs.writeFileSync(`.ai/reports/${id}.md`, `# Report ${id}\n\n## Done\nok\n\n## Deviations\n${deviations}\n\n## Notes\n-\n`);
-  fs.writeFileSync('.ai/STATE.md', state.replace(new RegExp(`^(\\| ${id} \\| .*? \\| )open( \\|)`, 'm'), '$1in_review$2'));
+  fs.writeFileSync(`.ai/reports/${id}.md`, `# Report ${id}\n\n## Done\nok\n\n## Evidence\nfake coder\n\n## Deviations\n${deviations}\n\n## Notes\n-\n`);
+  // the real hand-back step: validates branch, report and checks, then sets in_review
+  try {
+    console.log(execFileSync('node', ['.ai/bin/ai.mjs', 'handback', id], { encoding: 'utf8' }));
+  } catch (e) {
+    say({ type: 'result', subtype: 'success', is_error: true, result: `handback refused: ${e.stdout}`, num_turns: 3 });
+    git('switch', '-q', 'feature/T-000');
+    return;
+  }
   git('switch', '-q', 'feature/T-000'); // leave the base branch free for the lead worktree
   say({ type: 'result', subtype: 'success', result: `${id} handed back`, num_turns: 3, duration_ms: 1000 });
 });

@@ -28,12 +28,36 @@ Your auto-memory (loaded automatically) holds the decider's standing decisions �
 - Keep 2–3 tasks written ahead (status `blocked`, note "released after …") so the autopilot can continue.
 
 ## Merging
+- After a review with `approved`: **`node .ai/bin/ai.mjs merge T-NNN`** (run it as a background command) — it waits
+  for the CI of the branch head, merges `--no-ff` from the lead worktree, pushes, sets `merged` (your review file stays),
+  releases the next written task. Exit 3 = conflict (the merge stays open in the lead worktree: resolve, `git add -A`,
+  `git commit`, `git push origin <base>`), exit 4 = the coder did not push the branch (`git push origin <branch>` from
+  the coder's checkout is safe), exit 1 = CI red, exit 2 = CI timeout.
+- **Check the CI of the base branch after every merge** — a green branch can give a red base (two branches that
+  interact; an unformatted table after a conflict). The autopilot watches the merge commits it makes; for manual
+  merges look yourself (`ai ci <hash>`) and fix forward.
+- Typical conflicts: the changelog (the task's entries stay **above** the newest release block); Markdown tables
+  (run the formatter after resolving, otherwise `format:check` fails on the base branch).
 - **Never check out branches in the coder's checkout** – the coder works there and switches branches at any time.
 - Merge and push from the **lead worktree** (`leadWorktree` in `project.json`, on the base branch, own
   dependencies): `git pull --ff-only origin <base>` → `git merge --no-ff -F <msg> origin/<branch>` →
   `git push origin <base>`. Commit messages end with `mergeTrailer` from `project.json`.
 - Resolve doc conflicts (changelog etc.: keep both); run type checks only when code conflicted.
 - Tests run in CI: never run the full suite locally; check the merge commit's CI afterwards and fix forward.
+
+## Long sessions and handover
+The lead's context rots like the coder's. Keep `.ai/HANDOVER.md` (template: `templates/handover.md`) current — start
+steps, state, binding decisions, the review/merge routine that works, pitfalls, machine notes, the first message for
+a fresh chat — and refresh it before ending a long session. A fresh lead starts from it. Never run two autopilots (the
+lock refuses the second one); stop a stale one first.
+
+## Stability
+Once the loop runs reliably, changes to the autopilot, CI or the coder setup are made only when the decider asks.
+Propose improvements in chat or `decisions/`; do not tinker with a working pipeline.
+
+## Human acceptance
+After each group of user-visible tasks plan a human acceptance test (`playbooks/human-acceptance-test.md`): the
+decider tests the deployed build by hand; findings go into `.ai/FINDINGS.md`; feature work pauses meanwhile.
 
 ## Review
 - Check against the task's acceptance criteria and binding decisions first, then the conventions
@@ -48,6 +72,9 @@ Copy `.ai/templates/task.md`: goal, context with file paths, **binding decisions
 (the fast set + touched E2E specs only), docs, hand-back. One sitting – if it will not fit, split it. Add the STATE
 row (`blocked` until released) and the ROADMAP entry. From the first project's 47 reviews:
 
+- **Probe external premises** (an online endpoint, a vendor feed, an API) with the real thing and put the result in
+  the task. A feature built on "the channel carries updates" that carries none is wasted work; if a premise fails, the
+  decider decides what happens to the task.
 - **Verify facts before you write them** (vendor files, the real CLI, the current code). Wrong facts in a task were
   the most common source of deviations: a "forbidden" command that the stock profile itself emits, a wrong file
   name, a layer count.

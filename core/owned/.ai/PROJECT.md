@@ -16,10 +16,20 @@ Owned by the project (the framework never overwrites this file). Generic rules: 
 {{standardChecks}}
 
 ## Releases
-(Default rule from the first project; adapt or delete.) The lead never cuts a release on its own initiative: when a
-group of work packages is merged and CI on `{{baseBranch}}` is green it **proposes** the next release candidate in chat,
-the decider confirms. Then, from the lead worktree: bump all manifests with the version script, run the version
-check, move the changelog "Unreleased" block under the new version, commit, tag, push. Next planned release: (fill in).
+(Choose one and delete the other.)
+- **Lead releases on its own** (the rule the first project ended up with): after each group of user-visible tasks, when
+  the group is merged, CI on `{{baseBranch}}` is green and the docs and screenshots are current, the lead cuts the next
+  release candidate (`v1.0.0-rc.N`) and tells the decider afterwards. From the lead worktree: bump all manifests with
+  the version script, fix the lock file versions, run the version check, move the changelog "Unreleased" block under
+  the new version, commit, annotated tag, push both.
+- **Lead proposes, decider confirms** (the stricter start): the lead proposes the release in chat when the group is
+  merged and CI is green; the decider says yes; then the same steps.
+Next planned release: (fill in).
+
+## Documentation rule
+After every user-visible change the documentation follows **in the same task**: README (kept short — at most ~150
+lines, details in `docs/`), feature docs, the acceptance/test-case list, regenerated screenshots, changelog. UI tasks
+carry this as an acceptance criterion; stale screenshots or a grown README = `changes_requested`.
 
 ## Risk
 Tasks whose title or text matches `risk.*` in `project.json` are never auto-merged. Add project-specific

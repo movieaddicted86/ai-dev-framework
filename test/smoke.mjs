@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FW = path.dirname(HERE);
@@ -71,6 +71,9 @@ try {
   // --- init
   const init = run('node', [path.join(FW, 'bootstrap.mjs'), 'init', proj, '--name', 'demo', '--repo', 'o/demo']);
   ok(init.code === 0, 'bootstrap init', init.out);
+  git(proj, 'add', '-A');
+  git(proj, 'commit', '-q', '-m', 'Install ai-dev-framework');
+  git(proj, 'push', '-q', 'origin', 'main');
   for (const f of ['.ai/PROTOCOL.md', '.ai/bin/ai.mjs', '.ai/STATE.md', '.ai/project.json', 'docs/CONVENTIONS.md', 'docs/principles/01-architecture.md', 'eslint.base.mjs', 'eslint.config.mjs', '.github/workflows/ci.yml'])
     ok(fs.existsSync(path.join(proj, f)), `installed ${f}`);
   ok(!/\{\{name\}\}/.test(fs.readFileSync(path.join(proj, '.ai', 'project.json'), 'utf8')), 'placeholders filled');
@@ -80,7 +83,7 @@ try {
 
   // --- project overrides for the test: no real CI, fake coder, fast polling
   const pj = JSON.parse(fs.readFileSync(path.join(proj, '.ai', 'project.json'), 'utf8'));
-  Object.assign(pj, { leadWorktree: lead, ci: { provider: 'none' }, coder: { command: 'node', args: [path.join(HERE, 'fake-coder.mjs')] }, lead: { pollSec: 1, healthEveryMin: 999 } });
+  Object.assign(pj, { leadWorktree: lead, ci: { provider: 'none' }, coder: { command: 'node', args: [path.join(HERE, 'fake-coder.mjs')] }, handback: { checks: ['node -e "process.exit(0)"'], pins: [] }, lead: { pollSec: 1, healthEveryMin: 999 } });
   fs.writeFileSync(path.join(proj, '.ai', 'project.json'), JSON.stringify(pj, null, 2));
   process.env.POLL_SEC = '1';
 
@@ -103,7 +106,7 @@ try {
   // --- runner with the fake coder
   const pass = await until(['run'], /pass finished/, { env: { POLL_SEC: '1' } });
   ok(pass.matched, 'runner completes a pass', pass.out);
-  ok(/\| T-001 \| First task \| in_review \|/.test(state()), 'coder handed back (in_review)');
+  ok(/\| T-001 \| First task \| in_review \|/.test(state()), 'coder handed back (in_review)', pass.out);
   ok(fs.existsSync(path.join(proj, '.ai', 'logs')) && fs.readdirSync(path.join(proj, '.ai', 'logs')).some((f) => f.endsWith('.jsonl')), 'runner wrote a log');
   ok(ai('task', 'deviations', 'T-001').out === 'none', 'deviations: none');
   ok(ai('task', 'pending').out === 'T-001', 'report is pending for the lead');
@@ -123,6 +126,53 @@ try {
   const wake = await until(['lead-auto'], /LEAD WAKE: .*deviations/);
   ok(wake.matched, 'autopilot wakes the lead on deviations', wake.out);
   ok(/\| T-002 \| Second task \| in_review \|/.test(state()), 'T-002 was not merged');
+
+  // --- the lead's manual merge after a review (keeps the lead's review file, releases the next task)
+  fs.writeFileSync(path.join(proj, '.ai', 'reviews', 'T-002.md'), '# Review T-002\n\nVerdict: **approved** – deviation accepted.\n');
+  const mg = ai('merge', 'T-002');
+  ok(mg.code === 0 && /MERGED T-002 as \w+/.test(mg.out), 'ai merge merges the approved task', mg.out);
+  ok(/\| T-002 \| Second task \| merged \|/.test(state()) && /\| T-003 \| SEC-9 harden the thing \| open \|/.test(state()), 'ai merge sets merged and releases the next task');
+  ok(fs.readFileSync(path.join(proj, '.ai', 'reviews', 'T-002.md'), 'utf8').includes('deviation accepted'), "the lead's review file is kept");
+  ok(fs.existsSync(path.join(lead, 'T-002.txt')), 'second task is on main in the lead worktree');
+  ok(ai('merge', 'T-404').code === 2, 'ai merge refuses an unknown task');
+
+  // --- hand-back validation: wrong branch / missing report are refused, nothing is changed
+  task('T-004', 'Hand-back check', 'in_progress');
+  const hb = ai('handback', 'T-004');
+  ok(hb.code === 1 && /task's branch is 'feature\/T-004'/.test(hb.out) && /report missing/.test(hb.out), 'ai handback refuses a wrong branch and a missing report', hb.out);
+  ok(/\| T-004 \| Hand-back check \| in_progress \|/.test(state()), 'a refused hand-back leaves the STATE row alone');
+
+  // ... a failing check and a pinning spec that the evidence does not name are refused; naming it hands back
+  git(proj, 'switch', '-q', '-c', 'feature/T-004');
+  fs.writeFileSync(path.join(proj, 'ObjectToolbar.tsx'), 'export {};\n');
+  git(proj, 'add', 'ObjectToolbar.tsx');
+  git(proj, 'commit', '-q', '-m', 'Add toolbar');
+  git(proj, 'push', '-q', 'origin', 'feature/T-004');
+  const report4 = path.join(proj, '.ai', 'reports', 'T-004.md');
+  fs.writeFileSync(report4, '# Report T-004\n\n## Done\nok\n\n## Evidence\nunit tests only\n\n## Deviations\nNone.\n\n## Notes\n-\n');
+  const cfgPath = path.join(proj, '.ai', 'project.json');
+  const withHandback = (h) => fs.writeFileSync(cfgPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(cfgPath, 'utf8')), handback: h }, null, 2));
+  withHandback({ checks: ['node -e "console.error(1);process.exit(3)"'], pins: [] });
+  const failing = ai('handback', 'T-004');
+  ok(failing.code === 1 && /check failed/.test(failing.out), 'ai handback refuses when a check fails', failing.out);
+  withHandback({ checks: [], pins: [{ when: 'Toolbar', spec: 'e2e/specs/sidebar.spec.ts' }] });
+  const pinned = ai('handback', 'T-004');
+  ok(pinned.code === 1 && /pinned by e2e\/specs\/sidebar\.spec\.ts/.test(pinned.out), 'ai handback requires the pinning spec in the evidence', pinned.out);
+  fs.writeFileSync(report4, fs.readFileSync(report4, 'utf8').replace('unit tests only', 'unit tests; npx playwright test e2e/specs/sidebar.spec.ts: 12 passed'));
+  const handed = ai('handback', 'T-004');
+  ok(handed.code === 0 && /\| T-004 \| Hand-back check \| in_review \|/.test(state()), 'ai handback hands back once everything is in place', handed.out);
+  git(proj, 'switch', '-q', 'feature/T-000');
+
+  // --- single-instance locks
+  const lockUrl = pathToFileURL(path.join(proj, '.ai', 'bin', 'lib', 'lock.mjs')).href;
+  const holder = spawn('node', ['-e', `import('${lockUrl}').then((m) => { console.log(JSON.stringify(m.acquireLock('smoke'))); setTimeout(() => {}, 8000); })`], { cwd: proj, stdio: ['ignore', 'pipe', 'pipe'] });
+  await new Promise((r) => holder.stdout.once('data', r));
+  const second = run('node', ['-e', `import('${lockUrl}').then((m) => console.log(JSON.stringify(m.acquireLock('smoke'))))`], { cwd: proj });
+  ok(/"ok":false/.test(second.out), 'a second instance cannot take a live lock', second.out);
+  holder.kill();
+  await new Promise((r) => holder.once('exit', r));
+  const third = run('node', ['-e', `import('${lockUrl}').then((m) => console.log(JSON.stringify(m.acquireLock('smoke'))))`], { cwd: proj });
+  ok(/"ok":true/.test(third.out), 'the lock of a dead owner is ignored', third.out);
 
   // --- health: no runner is running any more
   const h = ai('health');

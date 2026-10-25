@@ -6,6 +6,8 @@ const commands = {
   run: ['cmd/run.mjs', 'coder runner: a fresh `claude -p` pass per task'],
   'lead-auto': ['cmd/lead-auto.mjs', 'lead autopilot: merge routine hand-backs, wake the lead for the rest (--manual: never merge)'],
   health: ['cmd/health.mjs', 'coder health check (--quiet)'],
+  handback: ['cmd/handback.mjs', 'handback T-NNN: coder, last step – validate branch, report, checks; sets in_review'],
+  merge: ['cmd/merge.mjs', 'merge T-NNN: lead, after approval – wait for CI, merge --no-ff, push, release the next task'],
   doctor: ['cmd/doctor.mjs', 'check this machine/project for the workflow'],
   ci: ['cmd/ci.mjs', 'ci <sha> | failjobs <sha>: CI status of a commit'],
   task: ['cmd/task.mjs', 'task <pending|deviations|risky|title|next|release|mark-merged> …: STATE.md helpers'],
